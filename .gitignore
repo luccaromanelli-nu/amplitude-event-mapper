@@ -1,0 +1,7 @@
+projects/
+.env
+.env.local
+*.log
+.DS_Store
+node_modules/
+.tmp/

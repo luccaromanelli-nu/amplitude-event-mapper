@@ -1,0 +1,33 @@
+# Required
+project_name: <slug>           # short kebab-case identifier (used as projects/<name>/)
+scope: |
+  <2-3 sentence description of what is in scope: which surface, which flows,
+   which experiment, what we want to measure>
+
+country: BR                    # BR | MX | CO
+
+# A/B test (optional)
+ab_test: false                 # set true if this is an experiment
+expr_id: <experiment-id>       # required when ab_test=true
+cells:                         # required when ab_test=true; MUST include control
+  - control
+  - treatment
+
+# Sources
+sources:
+  figma:                       # REQUIRED — primary input
+    - <figma file or frame URL>
+    - <one URL per cell, when cells have separate Figma frames>
+  miro:                        # OPTIONAL — squad's event reference board(s)
+    - <miro board URL>
+  confluence:                  # OPTIONAL — RFC, tech assessment, existing event docs
+    - <confluence page URL>
+
+# Filters / context (optional)
+squad: <squad>                 # used to scope Confluence/Glean searches
+owner: <owner>                 # default value for the `owner` property in proposals
+
+# Defaults — override when not in CC Financing
+default_provider: finn
+default_package: catalyst_entrypoint
+default_entrypoint_type: bdc-widget

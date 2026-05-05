@@ -1,0 +1,45 @@
+{
+  "_note": "Synthetic Amplitude/Magnitude fixture for the PPF MX awareness demo. Approximates a 30-day window of production firings.",
+  "query": "SELECT event_type, current_screen, expr_id, variant, owner, provider, COUNT(*) AS firings_30d FROM magnitude.mx.amplitude_events WHERE event_date >= CURRENT_DATE - INTERVAL 30 DAYS AND (current_screen IN ('financing_hub') OR expr_id = 'ppf-awareness-mx') GROUP BY 1,2,3,4,5,6 ORDER BY firings_30d DESC LIMIT 500",
+  "rows": [
+    {
+      "event_type": "widget__loaded",
+      "current_screen": "financing_hub",
+      "expr_id": "financing-hub-mx.unified",
+      "variant": null,
+      "owner": "cc-financing",
+      "provider": "finn",
+      "firings_30d": 142331
+    },
+    {
+      "event_type": "deeplink_clicked",
+      "current_screen": "financing_hub",
+      "tag": "pix_financing",
+      "expr_id": null,
+      "variant": null,
+      "owner": "cc-financing",
+      "provider": "finn",
+      "firings_30d": 88412
+    },
+    {
+      "event_type": "deeplink_clicked",
+      "current_screen": "financing_hub",
+      "tag": "boleto_financing",
+      "expr_id": null,
+      "variant": null,
+      "owner": "cc-financing",
+      "provider": "finn",
+      "firings_30d": 41287
+    },
+    {
+      "event_type": "deeplink_clicked",
+      "current_screen": "financing_hub",
+      "tag": "financing_history",
+      "expr_id": null,
+      "variant": null,
+      "owner": "cc-financing",
+      "provider": "finn",
+      "firings_30d": 22119
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_slack_slack__slack_send_.*|mcp__plugin_slack_slack__slack_create_.*|mcp__plugin_slack_slack__slack_update_.*|mcp__plugin_slack_slack__slack_schedule_message",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"amplitude-event-mapper is read-only by design. Slack write tools are denied. See CLAUDE.md.\"}}'"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__Atlassian__create.*|mcp__Atlassian__edit.*|mcp__Atlassian__addComment.*|mcp__Atlassian__addWorklog.*|mcp__Atlassian__transition.*|mcp__Atlassian__update.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"amplitude-event-mapper is read-only by design. Atlassian write tools are denied. See CLAUDE.md.\"}}'"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__google-workspace__.*_create.*|mcp__google-workspace__.*_send.*|mcp__google-workspace__.*_modify.*|mcp__google-workspace__.*_update.*|mcp__google-workspace__.*_delete.*|mcp__google-workspace__drive_trashFile|mcp__google-workspace__drive_moveFile|mcp__google-workspace__drive_renameFile",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:\"amplitude-event-mapper is read-only by design. Google Workspace write tools are denied. See CLAUDE.md.\"}}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if printf '%s\\n' \"$CMD\" | grep -qE '^(bash )?[^ ;|&]+/bin/smoke-test\\.sh( [^ ;|&]*)?$|^touch projects/[a-zA-Z0-9_-]+/APPROVED$|^ls projects/[a-zA-Z0-9_-]+/?$|^cat projects/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+\\.md$|^diff projects/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+\\.md examples/[a-zA-Z0-9_-]+/expected/[a-zA-Z0-9_.-]+\\.md$'; then exit 0; else jq -n --arg cmd \"$CMD\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:(\"amplitude-event-mapper denies arbitrary Bash. Allowed: bin/smoke-test.sh, touch APPROVED, ls/cat/diff in projects/. Got: \" + $cmd)}}'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

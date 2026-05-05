@@ -1,0 +1,52 @@
+{
+  "_note": "Synthetic Figma fixture for the PPF MX awareness demo. Three cells (control, soft, hard) on the Cash Flow Financing hub.",
+  "cells": [
+    {
+      "cell": "control",
+      "frames": [
+        {
+          "screen_path": "financing_hub",
+          "nodes": [
+            { "node_id": "1:1", "name": "Financing Hub", "type": "screen", "interaction_type": "load" },
+            { "node_id": "1:2", "name": "row_pix_financing", "type": "row", "interaction_type": "tap", "navigates_to": "pix_financing_simulation" },
+            { "node_id": "1:3", "name": "row_boleto_financing", "type": "row", "interaction_type": "tap", "navigates_to": "boleto_simulation" },
+            { "node_id": "1:4", "name": "row_history", "type": "row", "interaction_type": "tap", "navigates_to": "financing_history" }
+          ]
+        }
+      ]
+    },
+    {
+      "cell": "soft",
+      "frames": [
+        {
+          "screen_path": "financing_hub",
+          "nodes": [
+            { "node_id": "2:1", "name": "Financing Hub", "type": "screen", "interaction_type": "load" },
+            { "node_id": "2:2", "name": "row_pix_financing", "type": "row", "interaction_type": "tap", "navigates_to": "pix_financing_simulation" },
+            { "node_id": "2:3", "name": "row_boleto_financing", "type": "row", "interaction_type": "tap", "navigates_to": "boleto_simulation" },
+            { "node_id": "2:4", "name": "row_history", "type": "row", "interaction_type": "tap", "navigates_to": "financing_history" },
+            { "node_id": "2:5", "name": "ppf_widget_soft", "type": "widget", "interaction_type": "load" },
+            { "node_id": "2:6", "name": "btn_ppf_learn_more", "type": "button", "interaction_type": "tap", "navigates_to": "ppf_explainer" }
+          ]
+        }
+      ]
+    },
+    {
+      "cell": "hard",
+      "frames": [
+        {
+          "screen_path": "financing_hub",
+          "nodes": [
+            { "node_id": "3:1", "name": "Financing Hub", "type": "screen", "interaction_type": "load" },
+            { "node_id": "3:2", "name": "row_pix_financing", "type": "row", "interaction_type": "tap", "navigates_to": "pix_financing_simulation" },
+            { "node_id": "3:3", "name": "row_boleto_financing", "type": "row", "interaction_type": "tap", "navigates_to": "boleto_simulation" },
+            { "node_id": "3:4", "name": "row_history", "type": "row", "interaction_type": "tap", "navigates_to": "financing_history" },
+            { "node_id": "3:5", "name": "ppf_widget_hard", "type": "widget", "interaction_type": "load" },
+            { "node_id": "3:6", "name": "btn_ppf_apply_now", "type": "button", "interaction_type": "tap", "navigates_to": "ppf_application" },
+            { "node_id": "3:7", "name": "btn_ppf_dismiss", "type": "button", "interaction_type": "tap", "navigates_to": null }
+          ]
+        }
+      ]
+    }
+  ]
+}
