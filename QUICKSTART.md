@@ -5,7 +5,7 @@ This walks you through running the plugin against the bundled demo project. No r
 ## 1. Install the plugin
 
 ```bash
-git clone https://github.com/lucca-romanelli/amplitude-event-mapper.git
+git clone https://github.com/luccaromanelli-nu/amplitude-event-mapper.git
 cd amplitude-event-mapper
 cp .env.example .env
 claude --plugin-dir .

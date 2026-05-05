@@ -15,7 +15,7 @@ For a given project, the plugin walks every screen / button / row / interaction 
 ## Install (60 seconds)
 
 ```bash
-git clone https://github.com/lucca-romanelli/amplitude-event-mapper.git
+git clone https://github.com/luccaromanelli-nu/amplitude-event-mapper.git
 cd amplitude-event-mapper
 cp .env.example .env       # edit NU_BU, NU_COUNTRY, FIGMA_TOKEN, NU_DATABRICKS_*
 claude --plugin-dir .
