@@ -37,16 +37,24 @@ Or run the smoke test:
 
 ## Real project
 
+In Claude, scaffold the project interactively:
+
+```
+/amplitude-event-mapper:create-project <your-project>
+```
+
+This asks for country, scope, Figma URL, A/B cells (if any), Miro and Confluence URLs, and writes `projects/<your-project>/input.yaml`. Then run the pipeline:
+
+```
+/amplitude-event-mapper:propose <your-project>
+```
+
+Prefer to scaffold by hand? Copy the template instead:
+
 ```bash
 mkdir -p projects/<your-project>
 cp templates/input-template.yaml projects/<your-project>/input.yaml
 $EDITOR projects/<your-project>/input.yaml
-```
-
-Then in Claude:
-
-```
-/amplitude-event-mapper:propose <your-project>
 ```
 
 Review `projects/<your-project>/proposed-events.md`. When ready:
@@ -61,6 +69,7 @@ Rerun `/amplitude-event-mapper:propose <your-project>` (auto-promotes) or run `/
 
 | Command | Use |
 |---------|-----|
+| `/amplitude-event-mapper:create-project <project>` | Interactive scaffold of `projects/<project>/input.yaml` |
 | `/amplitude-event-mapper:propose <project>` | Full pipeline: gather → cross-check → propose → format |
 | `/amplitude-event-mapper:propose --demo` | Same, using bundled fixtures |
 | `/amplitude-event-mapper:gather <project>` | Gather only (refresh inputs) |

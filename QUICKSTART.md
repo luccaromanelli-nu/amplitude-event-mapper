@@ -78,23 +78,29 @@ The orchestrator detects the marker, skips re-generation, and promotes `proposed
 
 ## 5. Map your real project
 
-Copy the demo input as a starting point:
+Scaffold the project interactively:
 
-```bash
-mkdir -p projects/<your-project>
-cp examples/demo-ppf-mx/input.yaml projects/<your-project>/input.yaml
-$EDITOR projects/<your-project>/input.yaml
+```
+/amplitude-event-mapper:create-project <your-project>
 ```
 
-Edit `figma`, `miro_board_urls`, `confluence_urls`, `cells`, `expr_id`, etc. See [`docs/inputs.md`](docs/inputs.md) for the full schema.
+This asks for country, scope, Figma URL, A/B cells (if any), Miro and Confluence URLs, then writes `projects/<your-project>/input.yaml`. See [`docs/inputs.md`](docs/inputs.md) for the full schema.
 
-Then:
+Then run the pipeline:
 
 ```
 /amplitude-event-mapper:propose <your-project>
 ```
 
 You'll need real auth for this step. See [`docs/auth.md`](docs/auth.md).
+
+Prefer to scaffold by hand? Copy the demo input as a starting point:
+
+```bash
+mkdir -p projects/<your-project>
+cp examples/demo-ppf-mx/input.yaml projects/<your-project>/input.yaml
+$EDITOR projects/<your-project>/input.yaml
+```
 
 ## Troubleshooting
 

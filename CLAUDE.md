@@ -9,6 +9,8 @@ Given a project (Figma file + supporting docs), produce a delta-only Amplitude e
 ## Pipeline
 
 ```
+              create-project              interactive scaffold of input.yaml
+                       ↓
             ┌─ figma-walker ──────────┐
             ├─ miro-event-fetcher ────┤
    gather   ├─ confluence-fetcher ────┤  parallel
@@ -27,7 +29,7 @@ Given a project (Figma file + supporting docs), produce a delta-only Amplitude e
               format-proposal --finalize on APPROVED marker
 ```
 
-The orchestrator skill (`skills/orchestrate/SKILL.md`) runs this pipeline. Granular slash commands (`/gather`, `/cross-check`, `/propose-only`, `/finalize`) call subsets directly.
+The orchestrator skill (`skills/orchestrate/SKILL.md`) runs the gather→propose pipeline. The `create-project` skill scaffolds `projects/<name>/input.yaml` interactively before the pipeline starts. Granular slash commands (`/create-project`, `/gather`, `/cross-check`, `/propose-only`, `/finalize`) call subsets directly.
 
 ## Decision tree
 

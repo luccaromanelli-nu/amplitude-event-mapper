@@ -19,7 +19,20 @@ If `projects/<project>/APPROVED` exists, do NOT regenerate. Invoke the `finalize
 
 ### Step 1 — Read input
 
-Read `projects/<project>/input.yaml`. Validate it has at minimum:
+Read `projects/<project>/input.yaml`.
+
+If the file does not exist, stop with:
+
+```
+projects/<project>/input.yaml not found.
+
+Run /amplitude-event-mapper:create-project <project> to scaffold it interactively,
+or copy templates/input-template.yaml into projects/<project>/input.yaml and edit by hand.
+```
+
+Do NOT call any gather agents in this case.
+
+Validate the input has at minimum:
 
 - `project_name`
 - `scope`
