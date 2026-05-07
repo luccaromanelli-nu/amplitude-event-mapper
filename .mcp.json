@@ -6,18 +6,6 @@
       "env": {
         "FIGMA_TOKEN": "${FIGMA_TOKEN}"
       }
-    },
-    "miro": {
-      "url": "https://mcp.miro.com/"
-    },
-    "databricks": {
-      "command": "npx",
-      "args": ["-y", "@databricks/mcp-server-sql"],
-      "env": {
-        "DATABRICKS_HOST": "${NU_DATABRICKS_HOST}",
-        "DATABRICKS_TOKEN": "${NU_DATABRICKS_TOKEN}",
-        "DATABRICKS_WAREHOUSE_ID": "${NU_DATABRICKS_WAREHOUSE_ID}"
-      }
     }
   }
 }

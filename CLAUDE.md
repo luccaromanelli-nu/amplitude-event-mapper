@@ -1,125 +1,49 @@
-# Amplitude Event Mapper — System Instructions
+# amplitude-event-mapper — system instructions
 
-This file is loaded automatically when the plugin is enabled.
+Loaded when the plugin is enabled.
 
 ## Mission
 
-Given a project (Figma file + supporting docs), produce a delta-only Amplitude event proposal that engineers can review and implement. Reuse NuDS# event types whenever possible; differentiate by property values, not by inventing new event types.
+Given a Figma file, a PRD, and the existing instrumentation in code (looked up via Glean), produce a self-contained HTML proposal that engineers can review. Reuse existing Amplitude event types; differentiate by property values.
 
-## Pipeline
+## Single entry point
 
-```
-              create-project              interactive scaffold of input.yaml
-                       ↓
-            ┌─ figma-walker ──────────┐
-            ├─ miro-event-fetcher ────┤
-   gather   ├─ confluence-fetcher ────┤  parallel
-            └─ databricks-prober ─────┘
-                       ↓
-              event-cross-checker        sequential
-                       ↓
-              event-proposer             sequential
-                       ↓
-              format-proposal            sequential
-                       ↓
-              catalog-suggester          read-only
-                       ↓
-                human review             pause
-                       ↓
-              format-proposal --finalize on APPROVED marker
-```
+The only command is `/event-map [figma_url] [prd_url] [metrics_url]`. It invokes the `event-map` skill at `skills/event-map/SKILL.md`. Every other artifact (template, decision-tree doc) is a dependency of that skill.
 
-The orchestrator skill (`skills/orchestrate/SKILL.md`) runs the gather→propose pipeline. The `create-project` skill scaffolds `projects/<name>/input.yaml` interactively before the pipeline starts. Granular slash commands (`/create-project`, `/gather`, `/cross-check`, `/propose-only`, `/finalize`) call subsets directly.
+## Hard rules
+
+1. **Never propose a new event type.** Reuse `screen__viewed`, `button__clicked`, `widget__clicked`, `deeplink_clicked`, etc. New event types incur per-type Amplitude cost and are out of scope for tests.
+2. **Cite code for every reused event.** No event block ships without a `Reuse — found in <repo>:<file>:<line>` line. The citation comes from Glean code search.
+3. **`expr_id` is the anchor.** Extract it from code; if not found, tag `[CONFIRM]` and surface in Open Questions.
+4. **Pause at four confirm gates.**
+   1. matching flow file(s) found in code
+   2. extracted instrumentation (`expr_id`, `:analytics-context`, `:button-analytics-props`, direct calls) looks right
+   3. cell list reconciles between Figma and PRD
+   4. measurement intent is clear
+5. **Read-only.** The only writes allowed are `projects/<slug>/proposal.html` and (optionally) cell PNGs under `projects/<slug>/assets/`. Never call Slack send, Jira create, Confluence create, Drive write.
+
+## Key properties to prioritize
+
+When extracting from code and proposing values, prioritize these properties (most useful for analysis):
+
+- `expr_id` — most precise anchor for isolating a flow in Amplitude
+- `current_screen`
+- `owner`
+- `provider`
+- `flow`
+- `entity_name`
+- `experiment_name`
+- `experiment_group` (a.k.a. `variant`)
 
 ## Decision tree
 
-For every screen, button, row, or interaction identified in Figma:
+`docs/decision-tree.md` is the authoritative ruleset. Skill consults it on every Figma node.
 
-1. **Screen load / widget interaction / button tap** → reuse a NuDS# event (`widget__loaded`, `widget__clicked`, `screen__viewed`, `button__clicked`). Define properties: `current_screen`, `entity_name`, `expr_id`, `owner`, `provider`, `package`, `entrypoint_type`.
-2. **Same screen, different flow / context** → same event type, different property values (`current_screen`, `expr_id`, or `entrypoint_type`).
-3. **Tappable row navigating to a new flow via deeplink** → use `deeplink_clicked` with a `tag` property to identify the option. Do NOT use `widget__clicked` — `deeplink_clicked` captures full navigation intent.
-4. **Truly new screen / button / interaction** → propose a NuDS# event with new property values + a one-line **rationale** explaining the business question it answers.
-5. **A/B test** → define every event for every cell, including control. Use a `variant` property. Without per-cell definitions you cannot compare results in Amplitude. Never skip control.
-6. **Edge case** (truly novel — no NuDS# event fits) → tag `[NEEDS-HUMAN]` and stop. Amplitude charges per custom event type. Never auto-create.
+## Tagging
 
-Full rules with examples: [`docs/decision-tree.md`](docs/decision-tree.md).
+- `[NEW]` — value clearly does not exist in production yet (new variant string, new widget id).
+- `[CONFIRM]` — value guessed from PRD/Figma, partial match in code, or absent. Surfaces in Open Questions.
 
-## Side-effect rule (CRITICAL)
+## When info is missing
 
-This plugin is read-only by design. The hook layer in `hooks/hooks.json` denies every write tool. Specifically banned:
-
-- `mcp__plugin_slack_slack__slack_send_*`
-- `mcp__plugin_slack_slack__slack_create_*`
-- `mcp__plugin_slack_slack__slack_update_*`
-- `mcp__plugin_slack_slack__slack_schedule_message`
-- `mcp__Atlassian__create*`
-- `mcp__Atlassian__edit*`
-- `mcp__Atlassian__addComment*`
-- `mcp__Atlassian__addWorklog*`
-- `mcp__Atlassian__transition*`
-- `mcp__Atlassian__update*`
-- `mcp__google-workspace__*_create*`
-- `mcp__google-workspace__*_send*`
-- `mcp__google-workspace__*_modify*`
-- `mcp__google-workspace__*_update*`
-- `mcp__google-workspace__*_delete*`
-- `mcp__google-workspace__drive_trashFile`
-- `mcp__google-workspace__drive_moveFile`
-- `mcp__google-workspace__drive_renameFile`
-- `Bash` (except smoke test allowlist)
-
-If a subagent attempts any of these, the hook denies the call and the orchestrator stops with a clear error.
-
-Allowed writes are constrained to the working directory:
-
-- `projects/<project_name>/` — per-run outputs
-- `catalog/` — read-only by default; promotion is a separate explicit step
-
-## Output schema
-
-For every project, the pipeline produces:
-
-| File | Generated by | Required |
-|------|--------------|----------|
-| `projects/<name>/source-docs.md` | figma-walker | yes |
-| `projects/<name>/existing-events.md` | gather agents | yes |
-| `projects/<name>/cross-check.md` | event-cross-checker | yes |
-| `projects/<name>/proposed-events.md` | event-proposer + format-proposal | yes |
-| `projects/<name>/catalog-suggestions.md` | catalog-suggester | optional |
-| `projects/<name>/final-event-map.md` | format-proposal --finalize | only after APPROVED marker |
-
-## Environment
-
-Subagents read these env vars (defaults applied if missing):
-
-| Var | Default | Used by |
-|-----|---------|---------|
-| `NU_BU` | `cc-financing` | databricks-prober (Mantiqueira workspace gating) |
-| `NU_COUNTRY` | `BR` | all (drives table names, naming conventions) |
-| `NU_DATABRICKS_HOST` | unset | databricks-prober |
-| `NU_DATABRICKS_TOKEN` | unset | databricks-prober |
-| `NU_DATABRICKS_WAREHOUSE_ID` | unset | databricks-prober |
-| `NU_DEFAULT_PROVIDER` | `finn` | event-proposer |
-| `NU_DEFAULT_PACKAGE` | `catalyst_entrypoint` | event-proposer |
-| `FIGMA_TOKEN` | unset | figma-walker |
-
-Country-agnostic. Per Nubank's CC Financing Databricks doc, `NU_BU` is the primary access gate — workspace and cluster permissions follow Mantiqueira BU groups. Setting `NU_BU` correctly is the difference between a working Databricks query and a permission denied error.
-
-## Demo mode
-
-When invoked with `--demo`, the orchestrator and every gather agent swap MCP calls for fixture file reads at `examples/demo-ppf-mx/fixtures/`. Output lands in `projects/demo-ppf-mx/`. Used for onboarding and the smoke test.
-
-## Approval marker
-
-A file at `projects/<name>/APPROVED` (any contents — usually empty) signals engineer sign-off:
-
-- Subsequent runs of `/propose` skip re-generation and promote `proposed-events.md` → `final-event-map.md`.
-- `/finalize` does the same explicitly.
-- The plugin never creates the marker. Only humans do.
-
-## What this plugin is NOT
-
-- Not a code generator. Output is markdown intended for human review and downstream tooling.
-- Not a Slack notifier. Never sends messages.
-- Not a Jira/Confluence writer. Never creates pages or comments.
-- Not a catalog manager. Catalog promotion is a separate, human-reviewed step (out of scope for v0.1).
+Ask the user. Never invent. The skill is allowed to call `AskUserQuestion` at any of the four confirm gates and any time measurement intent or cell mapping is ambiguous.

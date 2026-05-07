@@ -1,7 +1,7 @@
 {
   "name": "amplitude-event-mapper",
-  "description": "AI-assisted Amplitude event proposal from Figma + Miro + Confluence + Databricks. Read-only by design — outputs markdown for engineer review with no side effects.",
-  "version": "0.1.0",
+  "description": "Generate an HTML Amplitude event proposal from a Figma file, a PRD, and the existing analytics in code (via Glean). Reuses existing event types and proposes only new property values.",
+  "version": "0.2.0",
   "author": {
     "name": "Lucca Romanelli"
   },

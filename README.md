@@ -1,117 +1,60 @@
-# Amplitude Event Mapper
+# amplitude-event-mapper
 
-AI-assisted Amplitude event proposal from **Figma** (primary) + Miro + Confluence + Databricks. Read-only by design — outputs markdown for engineer review. No Slack messages, no Jira tickets, no Confluence writes.
+A single-purpose Claude Code plugin that produces an HTML Amplitude event-mapping proposal from three inputs:
 
-## What it does
+- a **Figma** file (the test design)
+- a **PRD** (Google Doc, Confluence page, URL, or local file)
+- the **existing analytics in code**, looked up via Glean code search
 
-For a given project, the plugin walks every screen / button / row / interaction in your Figma file, cross-checks against your squad's Miro event board and live production data in Databricks, and produces a delta-only event proposal:
+The output is a self-contained HTML file that mirrors the PPF Awareness reference deliverable: hero, project meta, A/B cell table, user-flow map, per-screen sections with side-by-side cell screenshots and per-cell property tables, plus an open-questions checklist for engineers.
 
-- Reuses NuDS# events (`widget__loaded`, `widget__clicked`, `screen__viewed`, `button__clicked`, `deeplink_clicked`) wherever possible
-- Defines new property values rather than new event types
-- For A/B tests, defines every event for every cell (control + variants) with a `variant` property
-- Tags every new value with `[NEW]` and every value needing engineer validation with `[CONFIRM]`
-- Produces a single open-questions checklist engineers can sign off per item
+## Hard rule
 
-## Install (60 seconds)
+The plugin **never invents new event types**. Tests must reuse the existing taxonomy (`screen__viewed`, `button__clicked`, `widget__clicked`, `deeplink_clicked`, …) and propose only new property values on top.
 
-```bash
-git clone https://github.com/luccaromanelli-nu/amplitude-event-mapper.git
-cd amplitude-event-mapper
-cp .env.example .env       # edit NU_BU, NU_COUNTRY, FIGMA_TOKEN, NU_DATABRICKS_*
-claude --plugin-dir .
-```
+## Requirements
 
-## Demo run (no creds needed)
+| Dependency | Notes |
+|------------|-------|
+| Figma MCP | Mandatory. Configured in `.mcp.json`. Set `FIGMA_TOKEN`. |
+| Glean MCP | Mandatory. User-level config. Used to search code for `expr_id`, `:analytics-context`, `:button-analytics-props`, direct event calls. |
+| Google Workspace MCP | Optional. Used when the PRD URL is a Google Doc. Falls back to `WebFetch`. |
+| Atlassian MCP | Optional. Used when the PRD URL is a Confluence page. Falls back to `WebFetch`. |
 
-```
-/amplitude-event-mapper:propose --demo
-```
-
-Reads `examples/demo-ppf-mx/fixtures/` and writes to `projects/demo-ppf-mx/`. Compare with `examples/demo-ppf-mx/expected/`.
-
-Or run the smoke test:
-
-```bash
-./bin/smoke-test.sh
-```
-
-## Real project
-
-In Claude, scaffold the project interactively:
+## Usage
 
 ```
-/amplitude-event-mapper:create-project <your-project>
+/event-map [figma_url] [prd_url] [metrics_url]
 ```
 
-This asks for country, scope, Figma URL, A/B cells (if any), Miro and Confluence URLs, and writes `projects/<your-project>/input.yaml`. Then run the pipeline:
+All three args are optional — the skill will prompt for any missing required input.
 
-```
-/amplitude-event-mapper:propose <your-project>
-```
+`metrics_url` is optional context (a slide deck or doc with the analyses the team wants to run). When supplied, the skill uses it to prioritize which properties to propose.
 
-Prefer to scaffold by hand? Copy the template instead:
+## What the skill does
 
-```bash
-mkdir -p projects/<your-project>
-cp templates/input-template.yaml projects/<your-project>/input.yaml
-$EDITOR projects/<your-project>/input.yaml
-```
+1. Fetches the Figma frame tree and exports a PNG per cell frame.
+2. Fetches the PRD text from whichever source the URL points at.
+3. Asks Glean to find the matching flow in code (defaults to `nubank/finn` for CC Financing).
+4. Pauses for human confirmation at four gates:
+   1. correct flow file(s) identified?
+   2. extracted `expr_id` + analytics context look right?
+   3. cell list reconciles between Figma and PRD?
+   4. measurement intent is clear?
+5. Applies the decision tree in `docs/decision-tree.md` to map every Figma delta onto an existing event with new property values.
+6. Writes `projects/<slug>/proposal.html`.
 
-Review `projects/<your-project>/proposed-events.md`. When ready:
+## Output
 
-```bash
-touch projects/<your-project>/APPROVED
-```
+A single self-contained HTML file. Each event block carries:
 
-Rerun `/amplitude-event-mapper:propose <your-project>` (auto-promotes) or run `/amplitude-event-mapper:finalize <your-project>` to copy the approved proposal to `final-event-map.md`.
+- the existing event name (never invented)
+- a `Reuse — found in <repo>:<file>:<line>` citation
+- per-cell property comparison table with `[NEW]` / `[CONFIRM]` tags
+- a one-line rationale stating which business question the event answers
 
-## Slash commands
+Every `[CONFIRM]` is collected into a numbered open-questions checklist at the bottom of the page.
 
-| Command | Use |
-|---------|-----|
-| `/amplitude-event-mapper:create-project <project>` | Interactive scaffold of `projects/<project>/input.yaml` |
-| `/amplitude-event-mapper:propose <project>` | Full pipeline: gather → cross-check → propose → format |
-| `/amplitude-event-mapper:propose --demo` | Same, using bundled fixtures |
-| `/amplitude-event-mapper:gather <project>` | Gather only (refresh inputs) |
-| `/amplitude-event-mapper:cross-check <project>` | Re-run the gap matrix |
-| `/amplitude-event-mapper:propose-only <project>` | Regenerate proposal from existing gather output |
-| `/amplitude-event-mapper:finalize <project>` | Promote approved proposal to `final-event-map.md` |
+## Side effects
 
-## Side-effect guarantee
-
-The plugin's hook layer denies every write tool (Slack send, Jira create, Confluence create, Atlassian comment, Google Workspace create, Bash) by default. All MCP calls are read-only.
-
-If you see the plugin attempting a write tool, report it as a bug.
-
-## Project layout
-
-```
-amplitude-event-mapper/
-├── .claude-plugin/plugin.json
-├── .mcp.json                # vendored: figma + miro + databricks
-├── CLAUDE.md                # workflow, decision tree, side-effect rules
-├── commands/                # slash commands
-├── skills/                  # model-invokable skills
-├── agents/                  # subagents (one per data source + analysis step)
-├── hooks/hooks.json         # PreToolUse deny list
-├── catalog/                 # seed catalog of NuDS# events + naming conventions
-├── templates/               # event/proposal/cross-check templates
-├── examples/demo-ppf-mx/    # bundled demo project
-├── docs/                    # workflow, inputs, outputs, env vars, auth, FAQ
-└── projects/                # (gitignored) per-project run outputs
-```
-
-## Documentation
-
-- [`QUICKSTART.md`](QUICKSTART.md) — 5-step demo walk
-- [`docs/workflow.md`](docs/workflow.md) — pipeline diagram, subagent responsibilities
-- [`docs/inputs.md`](docs/inputs.md) — `input.yaml` schema, every field explained
-- [`docs/outputs.md`](docs/outputs.md) — every output file annotated
-- [`docs/decision-tree.md`](docs/decision-tree.md) — NuDS# reuse rules, A/B-cell rule, PPF learnings
-- [`docs/env-vars.md`](docs/env-vars.md) — every environment variable
-- [`docs/auth.md`](docs/auth.md) — how to authenticate each MCP
-- [`docs/faq.md`](docs/faq.md) — troubleshooting
-
-## Status
-
-v0.1.0 — pilot. Validated end-to-end via `bin/smoke-test.sh` on the bundled PPF MX demo project. Real-project validation pending PPF Awareness Optimization (MX) pilot run.
+None. The skill writes only `projects/<slug>/proposal.html` (and optionally cell PNGs under `projects/<slug>/assets/`). It never posts to Slack, comments on Jira, or edits Confluence.
