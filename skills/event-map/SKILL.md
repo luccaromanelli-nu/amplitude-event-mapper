@@ -43,15 +43,47 @@ Read CLI args. For any missing required arg, call `AskUserQuestion` with one que
 
 Call these in a single message with multiple tool uses:
 
-- **Figma** via Figma MCP — fetch frame tree starting at the URL's node ID. Collect:
-  - frame names and hierarchy
-  - per-frame screenshots (base64-encoded PNG, ≤180px wide)
+- **Figma** — fetch frame tree starting at the URL's node ID. Two transport options, in order of preference:
+  1. **Figma MCP** if `mcp__figma__*` tools are available.
+  2. **Figma REST API direct** as fallback (use when MCP not loaded but `FIGMA_TOKEN` is set, or the user pasted a token):
+     - `GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id}&depth=10` with header `X-FIGMA-TOKEN: <token>`
+     - Cache the response in `/tmp/event-map-cache/figma.json`.
+     - File key + node id are parsed from the URL: `https://www.figma.com/design/{file_key}/...?node-id={node-id}` (convert `1978-20184` → `1978:20184`).
+  3. If neither MCP nor token is available, abort with: "Set `FIGMA_TOKEN` env var (`export FIGMA_TOKEN=...` in `~/.zshrc`) or install the Figma MCP."
+  - When the user pastes a token in chat, persist it to `~/.zshrc` (`export FIGMA_TOKEN=...`) so future runs work — confirm with the user before writing if they have not already asked.
 - **PRD** — pick the right tool based on URL:
-  - `docs.google.com` → `mcp__google-workspace__docs_getText`
+  - `docs.google.com` → `mcp__google-workspace__docs_getText`. If that errors with a field-mask comment error, fall back to `mcp__glean_default__read_document` with the doc URL (returns the doc body via Glean's mirror).
   - Confluence (`*.atlassian.net/wiki/`) → `mcp__Atlassian__getConfluencePage`
   - http(s) other → `WebFetch` with prompt: "Return full text. Preserve headings and bullet lists."
   - local path → `Read`
 - **Metrics** (if supplied) — same routing as PRD.
+
+#### Step 2a — Always render Figma screen images (HARD)
+
+Every changing-screen section in the final HTML MUST include a row of phone-style Figma screenshots — one per cell that visually differs. This is non-negotiable: a written proposal without the visual deltas wastes the engineer's review time.
+
+For each section:
+1. Identify the representative frame ID per cell from the Figma node tree (look for FRAME children whose names are numeric and whose parents are SECTIONs matching the cell label).
+2. Batch-fetch render URLs with the Figma image API (single call, all IDs):
+   ```
+   GET https://api.figma.com/v1/images/{file_key}?ids=ID1,ID2,...&format=png&scale=1
+   ```
+3. Download each PNG to `projects/<slug>/assets/<cell-slug>-<screen-slug>.png`.
+4. Reference them in the HTML via a `<div class="figma-screens">` row at the top of each section, using the `figma-phone` markup defined in the template's CSS:
+   ```html
+   <div class="figma-screens">
+     <div class="figma-phone">
+       <img src="assets/<cell>-<screen>.png" alt="<screen> — <cell>">
+       <div class="figma-phone-label"><cell></div>
+       <div class="figma-phone-sub"><one-line delta></div>
+     </div>
+     <!-- one figma-phone per cell -->
+   </div>
+   ```
+
+Default mode = relative paths (`assets/...png`). The HTML + assets directory together ARE the deliverable; the template uses relative paths and the proposal opens locally without rebuilds.
+
+If a cell has no visual change for that screen (e.g., back button identical across cells), still include one representative phone for the screen and label it `all cells — same`. Never skip the screenshots row.
 
 Extract from the PRD:
 - project title and country
@@ -213,7 +245,7 @@ If no code citation could be sourced for a given event, replace the citation foo
 
 Write the filled HTML to `projects/<slug>/proposal.html`. Slug rule: kebab-case of PRD title + `-<country-lowercase>` if country known. Examples: `ppf-awareness-optimization-mx`.
 
-If cell PNGs were exported as separate files instead of inlined, write them to `projects/<slug>/assets/cell-<cell>.png`. Default: inline as base64 `data:` URLs so the HTML is self-contained.
+Cell PNGs MUST be present (see Step 2a). Default mode: write to `projects/<slug>/assets/<cell>-<screen>.png` and reference relatively from the HTML. The `assets/` dir + HTML together are the deliverable. Do not skip the `figma-screens` rows.
 
 Print:
 ```
@@ -239,4 +271,6 @@ After writing the file:
 2. Confirm at least one `<div class="event-block">` per changing screen.
 3. Confirm every event-block has either `<div class="code-citation">` with a real `repo:file:line` or `class="miss"`.
 4. Confirm no event name in the HTML is outside the existing taxonomy (`screen__viewed`, `widget__loaded`, `widget__clicked`, `button__clicked`, `deeplink_clicked`, `request_error` — extend only if Glean confirms it exists).
-5. Confirm Open Questions count == count of `[CONFIRM]` + `[NEEDS-HUMAN]` tags in the document.
+5. Confirm Open Questions count ≥ count of distinct `[CONFIRM]` / `[NEEDS-HUMAN]` themes (multiple tags may roll up into one question).
+6. **Confirm every per-screen section has a `<div class="figma-screens">` row with at least one `<img src="assets/...png">`.** If a section is missing screenshots, the proposal is incomplete — re-run Step 2a for that section before reporting done.
+7. Confirm `projects/<slug>/assets/` exists and contains a PNG for every `<img>` referenced in the HTML.
